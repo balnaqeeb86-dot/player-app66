@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="icon.svg" />
+  <title>حاسبة عربية</title>
+  <style>
+    :root {
+      --bg: #dbeafe;
+      --panel: #111827;
+      --display: #0b1220;
+      --num: #e5e7eb;
+      --operator: #f59e0b;
+      --equal: #10b981;
+      --clear: #ef4444;
+      --text: #ffffff;
+      --text-dark: #111827;
+      --shadow: rgba(0, 0, 0, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      font-family: "Tahoma", sans-serif;
+      background: linear-gradient(180deg, #dbeafe, #bfdbfe);
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+    }
+
+    .app {
+      width: min(92vw, 420px);
+      background: var(--panel);
+      border-radius: 28px;
+      padding: 18px 16px 16px;
+      box-shadow: 0 24px 48px var(--shadow);
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+
+    .title {
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+
+    .install-btn {
+      border: none;
+      background: #2563eb;
+      color: white;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: none;
+    }
+
+    .install-btn.show {
+      display: inline-block;
+    }
+
+    .display {
+      width: 100%;
+      min-height: 120px;
+      background: var(--display);
+      color: var(--text);
+      border: none;
+      border-radius: 18px;
+      padding: 18px 16px;
+      font-size: clamp(2rem, 6vw, 3rem);
+      text-align: left;
+      direction: ltr;
+      outline: none;
+      margin-bottom: 18px;
+      font-weight: 700;
+    }
+
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    button {
+      border: none;
+      border-radius: 18px;
+      min-height: 72px;
+      font-size: clamp(1.4rem, 4vw, 1.9rem);
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.08s ease, opacity 0.15s ease;
+      touch-action: manipulation;
+    }
+
+    button:active {
+      transform: scale(0.98);
+      opacity: 0.92;
+    }
+
+    .num {
+      background: var(--num);
+      color: var(--text-dark);
+    }
+
+    .operator {
+      background: var(--operator);
+      color: white;
+    }
+
+    .equal {
+      background: var(--equal);
+      color: white;
+      grid-column: span 2;
+    }
+
+    .clear {
+      background: var(--clear);
+      color: white;
+    }
+
+    @media (max-width: 380px) {
+      .app {
+        padding: 14px 12px 12px;
+      }
+
+      button {
+        min-height: 64px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div class="title">حاسبة</div>
+      <button id="installButton" class="install-btn" aria-label="تثبيت التطبيق">تثبيت التطبيق</button>
+    </div>
+
+    <input id="display" class="display" type="text" disabled />
+
+    <div class="buttons">
+      <button class="clear" onclick="clearDisplay()">C</button>
+      <button class="operator" onclick="appendValue('÷')">÷</button>
+      <button class="operator" onclick="appendValue('×')">×</button>
+      <button class="operator" onclick="deleteLast()">⌫</button>
+
+      <button class="num" onclick="appendValue('7')">7</button>
+      <button class="num" onclick="appendValue('8')">8</button>
+      <button class="num" onclick="appendValue('9')">9</button>
+      <button class="operator" onclick="appendValue('-')">−</button>
+
+      <button class="num" onclick="appendValue('4')">4</button>
+      <button class="num" onclick="appendValue('5')">5</button>
+      <button class="num" onclick="appendValue('6')">6</button>
+      <button class="operator" onclick="appendValue('+')">+</button>
+
+      <button class="num" onclick="appendValue('1')">1</button>
+      <button class="num" onclick="appendValue('2')">2</button>
+      <button class="num" onclick="appendValue('3')">3</button>
+      <button class="equal" onclick="calculateResult()">=</button>
+
+      <button class="num" onclick="appendValue('0')" style="grid-column: span 2;">0</button>
+      <button class="num" onclick="appendValue('.')">.</button>
+    </div>
+  </div>
+
+  <script>
+    const display = document.getElementById('display');
+    const installButton = document.getElementById('installButton');
+    let deferredPrompt = null;
+
+    function appendValue(value) {
+      display.value += value;
+    }
+
+    function clearDisplay() {
+      display.value = '';
+    }
+
+    function deleteLast() {
+      display.value = display.value.slice(0, -1);
+    }
+
+    function calculateResult() {
+      try {
+        let expr = display.value
+          .replace(/×/g, '*')
+          .replace(/÷/g, '/');
+
+        if (expr.trim() === '') return;
+
+        if (!/^[0-9+\-*/().\s]+$/.test(expr)) {
+          throw new Error('Invalid expression');
+        }
+
+        const result = Function('"use strict"; return (' + expr + ')')();
+
+        if (!Number.isFinite(result)) {
+          throw new Error('Math error');
+        }
+
+        display.value = Number.isInteger(result) ? result : Number(result.toFixed(10));
+      } catch {
+        display.value = 'خطأ';
+      }
+    }
+
+    document.addEventListener('keydown', (event) => {
+      const key = event.key;
+
+      if (/^[0-9]$/.test(key)) {
+        appendValue(key);
+      } else if (['+', '-', '*', '/', '.'].includes(key)) {
+        appendValue(key);
+      } else if (key === 'Enter') {
+        event.preventDefault();
+        calculateResult();
+      } else if (key === 'Backspace') {
+        event.preventDefault();
+        deleteLast();
+      } else if (key === 'Escape') {
+        clearDisplay();
+      }
+    });
+
+    window.addEventListener('beforeinstallprompt', (event) => {
+      event.preventDefault();
+      deferredPrompt = event;
+      installButton.classList.add('show');
+    });
+
+    installButton.addEventListener('click', async () => {
+      if (!deferredPrompt) {
+        return;
+      }
+
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+
+      if (outcome === 'accepted') {
+        installButton.textContent = 'تم التثبيت';
+      } else {
+        installButton.textContent = 'تم الإلغاء';
+      }
+
+      deferredPrompt = null;
+      installButton.classList.remove('show');
+    });
+
+    window.addEventListener('appinstalled', () => {
+      installButton.textContent = 'تم التثبيت';
+      installButton.classList.remove('show');
+    });
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
+{
+  "name": "حاسبة عربية",
+  "short_name": "حاسبة",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#dbeafe",
+  "theme_color": "#111827",
+  "description": "تطبيق حاسبة عربي قابل للتثبيت على الهاتف",
+  "lang": "ar",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
+const CACHE_NAME = 'calculator-ar-v1';
+const ASSETS = [
+  './',
+  './index.html',
+  './manifest.json',
+  './icon.svg'
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+      )
+    )
+  );
+  self.clients.claim();
+});
+
+self.addEventListener('fetch', (event) => {
+  event.respondWith(
+    caches.match(event.request).then((cached) => {
+      return cached || fetch(event.request).catch(() => caches.match('./index.html'));
+    })
+  );
+});
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="110" fill="#111827"/>
+  <rect x="70" y="70" width="372" height="372" rx="60" fill="#1f2937"/>
+  <text x="256" y="290" text-anchor="middle" font-size="220" font-family="Tahoma, Arial, sans-serif" fill="#ffffff">+</text>
+</svg>
